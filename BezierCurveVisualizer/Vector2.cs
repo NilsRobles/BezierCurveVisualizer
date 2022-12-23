@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BezierCurveVisualizer
+﻿namespace BezierCurveVisualizer
 {
     internal class Vector2
     {
@@ -16,11 +10,21 @@ namespace BezierCurveVisualizer
             this.y = y;
         }
 
-        public static Vector2 operator +(Vector2 a, Vector2 b) => new Vector2(a.x + b.x, a.y + b.y);
-        public static Vector2 operator -(Vector2 a, Vector2 b) => new Vector2(a.x - b.x, a.y - b.y);
-        public static Vector2 operator *(Vector2 a, double b) => new Vector2(a.x * b, a.y * b);
+        public Vector2()
+        {
+            x = 0;
+            y = 0;
+        }
 
-        public static implicit operator PointF(Vector2 d) => new PointF((float)d.x, (float)d.y);
+        public static Vector2 operator +(Vector2 a, Vector2 b) => new(a.x + b.x, a.y + b.y);
+
+        public static Vector2 operator -(Vector2 a, Vector2 b) => new(a.x - b.x, a.y - b.y);
+
+        public static Vector2 operator *(Vector2 a, double b) => new(a.x * b, a.y * b);
+
+        public static implicit operator PointF(Vector2 v) => new((float)v.x, (float)v.y);
+
+        public static implicit operator (double, double) (Vector2 v) => (v.x, v.y);
 
         public override string ToString() => $"({x}, {y})";
 

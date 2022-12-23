@@ -1,13 +1,4 @@
-﻿using Aspose.Pdf.Facades;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BezierCurveVisualizer
+﻿namespace BezierCurveVisualizer
 {
     internal class Curve
     {
@@ -19,24 +10,11 @@ namespace BezierCurveVisualizer
             MatrixForm
         }
 
-        public delegate Vector2 CurveAlgorithm(Vector2[] points, double t);
-        CurveAlgorithm algorithm;
+        CurveAlgorithms algorithm;
         #region Manipulate algorithm
-        public void SetCurveAlgorithm(CurveAlgorithm algorithm)
-        {
-            this.algorithm = algorithm;
-        }
-
         public void SetCurveAlgorithm(CurveAlgorithms algorithm)
         {
-            switch (algorithm)
-            {
-                case CurveAlgorithms.DeCasteljau:
-                    this.algorithm = DeCasteljau;
-                    return;
-                default:
-                    throw new ArgumentException();
-            }
+            this.algorithm = algorithm;
         }
 
         #endregion
@@ -49,7 +27,7 @@ namespace BezierCurveVisualizer
         {
             Vector2[] newPoints = new Vector2[points.Length + 1];
             Array.Copy(points, newPoints, points.Length);
-            newPoints[newPoints.Length - 1] = point;
+            newPoints[^1] = point;
             points = newPoints;
         }
         public void AddPointAt(Vector2 point, int index)
@@ -57,7 +35,6 @@ namespace BezierCurveVisualizer
             Vector2[] newPoints = new Vector2[points.Length + 1];
             Array.Copy(points, newPoints, index);
             newPoints[index] = point;
-            int lengthToCopy = points.Length - index;
             Array.Copy(points, index, newPoints, index + 1, points.Length - index);
             points = newPoints;
         }
@@ -89,26 +66,51 @@ namespace BezierCurveVisualizer
 
         public Curve()
         {
-            algorithm = DeCasteljau;
-            points = new Vector2[0];
+            algorithm = CurveAlgorithms.Bernstein;
+            points = Array.Empty<Vector2>();
             length = 1.0;
         }
 
-        public Vector2 Lerp(Vector2 a, Vector2 b, double t) => a + (b - a) * t;
+        public static Vector2 Lerp(Vector2 a, Vector2 b, double t) => a + (b - a) * t;
 
         public Vector2 TranslatePoint(double t)
         {
-            if (points.Length == 0) throw new Exception("Cannot translate point on a curve with 0 points");
+            if (points.Length == 0) return new Vector2();
 
-            return algorithm(points, t * length);
+            t *= length;
+
+            switch (algorithm)
+            {
+                case CurveAlgorithms.DeCasteljau:
+                    return DeCasteljau(points, t);
+                case CurveAlgorithms.Bernstein:
+                    return Bernstein(points, t);
+                default:
+                    return new Vector2();
+            }
         }
 
+        public Vector2 TranslatePoint(double t, Graphics g, Pen pen)
+        {
+            if (points.Length == 0) return new Vector2();
+
+            t *= length;
+
+            switch (algorithm)
+            {
+                case CurveAlgorithms.DeCasteljau:
+                    return DeCasteljau(points, t, g, pen);
+                case CurveAlgorithms.Bernstein:
+                    return Bernstein(points, t, g, pen);
+                default:
+                    return new Vector2();
+            }
+        }
+
+        #region DeCasteljau
         public Vector2 DeCasteljau(Vector2[] points, double t)
         {
-            if (points.Length == 1)
-            {
-                return points[0];
-            }
+            if (points.Length == 1) return points[0];
 
             Vector2[] newPoints = new Vector2[points.Length - 1];
             for (int i = 0; i < points.Length - 1; i++)
@@ -117,6 +119,77 @@ namespace BezierCurveVisualizer
             }
 
             return DeCasteljau(newPoints, t);
+        }
+
+        public Vector2 DeCasteljau(Vector2[] points, double t, Graphics g, Pen pen)
+        {
+            if (points.Length == 1) return points[0];
+
+            Vector2[] newPoints = new Vector2[points.Length - 1];
+            for (int i = 0; i < points.Length - 1; i++)
+            {
+                newPoints[i] = Lerp(points[i], points[i + 1], t);
+            }
+
+            PointF[] newPointsF = new PointF[newPoints.Length];
+            for (int i = 0; i < newPoints.Length; i++)
+            {
+                newPointsF[i] = newPoints[i];
+            }
+            if (newPointsF.Length > 1)
+            {
+                g.DrawLines(pen, newPointsF);
+            }
+
+            return DeCasteljau(newPoints, t, g, pen);
+        }
+
+        #endregion
+
+        #region Bernstein
+        public Vector2 Bernstein(Vector2[] points, double t)
+        {
+            int n = points.Length - 1;
+            if (n == 0) return new Vector2(0, 0);
+
+            int nFac = Factorial(n);
+            Vector2 resultingPoint = new Vector2(0, 0);
+
+            for (int i = 0; i <= n; i++)
+            {
+                resultingPoint += points[i] * (nFac / (Factorial(i) * Factorial(n - i)) * Math.Pow(t, i) * Math.Pow(1 - t, n - i));
+            }
+            return resultingPoint;
+        }
+
+        public Vector2 Bernstein(Vector2[] points, double t, Graphics g, Pen pen)
+        {
+            int n = points.Length - 1;
+            if (n == 0) return new Vector2(0, 0);
+
+            int nFac = Factorial(n);
+            Vector2 resultingPoint = new Vector2(0, 0);
+
+            for (int i = 0; i <= n; i++)
+            {
+                Vector2 vector = points[i] * (nFac / (Factorial(i) * Factorial(n - i)) * Math.Pow(t, i) * Math.Pow(1 - t, n - i));
+                g.DrawLine(pen, resultingPoint, resultingPoint + vector);
+                resultingPoint += vector;
+            }
+            return resultingPoint;
+        }
+
+        #endregion
+
+        private static int Factorial(int value)
+        {
+            if (value == 0) return 1;
+            int result = 1;
+            for (int i = 1; i <= value; i++)
+            {
+                result *= i;
+            }
+            return result;
         }
     }
 }
