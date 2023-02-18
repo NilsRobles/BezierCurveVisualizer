@@ -14,26 +14,25 @@ namespace BezierCurveVisualizer
         }
 
         #region Variables
-        CurveAlgorithms algorithm;
-        protected readonly DynamicArray<int> pointsIndexes;
-        private Vector2[] points;
-        protected readonly CurveManager manager;
+        // Curve shape
+        protected DynamicArray<Vector2> points;
+        private GraphicsPath curvePath;
+        
+        // Settings
+        private CurveAlgorithms algorithm;
         private double length;
-        protected int curveID;
-        GraphicsPath curvePath;
+        private int resolution;
 
         #endregion
 
-        public Curve(CurveManager manager, int curveID)
+        public Curve(int resolution)
         {
-            manager.curveReference.Add(curveID);
-            algorithm = CurveAlgorithms.Bernstein;
-            pointsIndexes = new DynamicArray<int>();
-            length = 1.0;
-            this.manager = manager;
-            this.curveID = curveID;
-            points = Array.Empty<Vector2>();
+            points = new DynamicArray<Vector2>();
             curvePath = new GraphicsPath();
+
+            algorithm = CurveAlgorithms.Bernstein;
+            length = 1.0;
+            this.resolution = resolution;
         }
 
         #region Change Settings
@@ -47,32 +46,39 @@ namespace BezierCurveVisualizer
             this.length = length;
         }
 
+        public void SetResolution(int resolution)
+        {
+            this.resolution = resolution;
+            UpdatePath();
+        }
+
         #endregion
 
-        public void UpdatePoints(int resolution)
+        public void UpdatePath()
         {
-            points = manager.GetpointsByIndexes(pointsIndexes.GetItems());
+            curvePath = new GraphicsPath();
 
-            if (resolution == 0) return;
+            if (resolution == 0 || points.Size() == 0) return;
+
             PointF[] pathPoints = new PointF[resolution];
             for (int i = 0; i < resolution; i++)
             {
-                pathPoints[i] = TranslatePoint((float)i / resolution);
+                pathPoints[i] = TranslatePoint((float)i / (resolution - 1));
             }
-            curvePath = new GraphicsPath();
             curvePath.AddLines(pathPoints);
         }
 
+        #region Translate Point
         public Vector2 TranslatePoint(double t)
         {
-            if (pointsIndexes.Size() == 0) return new Vector2();
+            if (points.Size() == 0) return new Vector2();
 
             t *= length;
 
             return algorithm switch
             {
-                CurveAlgorithms.DeCasteljau => DeCasteljau(points, t),
-                CurveAlgorithms.Bernstein => Bernstein(points, t),
+                CurveAlgorithms.DeCasteljau => DeCasteljau(points.GetArray(), t),
+                CurveAlgorithms.Bernstein => Bernstein(points.GetArray(), t),
                 CurveAlgorithms.PolynomialCoefficients => new Vector2(),
                 CurveAlgorithms.MatrixForm => new Vector2(),
                 _ => new Vector2(),
@@ -81,19 +87,21 @@ namespace BezierCurveVisualizer
 
         public Vector2 TranslatePoint(double t, Graphics g, Pen pen)
         {
-            if (pointsIndexes.Size() == 0) return new Vector2();
+            if (points.Size() == 0) return new Vector2();
 
             t *= length;
 
             return algorithm switch
             {
-                CurveAlgorithms.DeCasteljau => DeCasteljau(points, t, g, pen),
-                CurveAlgorithms.Bernstein => Bernstein(points, t, g, pen),
+                CurveAlgorithms.DeCasteljau => DeCasteljau(points.GetArray(), t, g, pen),
+                CurveAlgorithms.Bernstein => Bernstein(points.GetArray(), t, g, pen),
                 CurveAlgorithms.PolynomialCoefficients => new Vector2(),
                 CurveAlgorithms.MatrixForm => new Vector2(),
                 _ => new Vector2(),
             };
         }
+
+        #endregion
 
         #region DeCasteljau
         private Vector2 DeCasteljau(Vector2[] points, double t)
@@ -169,7 +177,9 @@ namespace BezierCurveVisualizer
 
         #endregion
 
-        public abstract void AddPoint(Vector2 point);
+        public DynamicArray<Vector2> GetPoints() => points;
+
+        public abstract void AddPoint(Vector2 point, int id);
 
         public abstract void DeletePoint(int pointIndex);
 
@@ -188,12 +198,14 @@ namespace BezierCurveVisualizer
 
         public void DrawConnections(Graphics g, Brush brush, Pen pen)
         {
-            for (int i = 0; i < points.Length - 1; i++)
+            // Draw lines between points
+            for (int i = 0; i < points.Size() - 1; i++)
             {
                 g.DrawLine(pen, points[i], points[i + 1]);
             }
 
-            for (int i = 0; i < points.Length; i++)
+            // Draw points
+            for (int i = 0; i < points.Size(); i++)
             {
                 Vector2 vector = points[i];
                 DrawFunctions.DrawFullCircle(g, brush, (float)vector.x, (float)vector.y, 9);

@@ -8,39 +8,21 @@ namespace BezierCurveVisualizer
 {
     internal class FreeCurve : Curve
     {
-        public FreeCurve(CurveManager manager, int curveID, Vector2 startPoint) : base(manager, curveID)
+        public FreeCurve(int resolution, Vector2 startPoint) : base(resolution)
         {
-            AddPoint(startPoint);
+            AddPoint(startPoint, 0);
         }
 
-        public override void AddPoint(Vector2 point)
+        public override void AddPoint(Vector2 point, int id)
         {
-            int idInCurve = pointsIndexes.Size();
-            if (manager.selection.Count != 0)
-            {
-                int clickedPointID = manager.selection.Last();
-                Vector2 clickedPointPosition = manager.points[manager.selection.Last()].position;
-
-                for (int i = 0; i < pointsIndexes.Size(); i++)
-                {
-                    if (clickedPointPosition == manager.points[pointsIndexes[i]].position)
-                    {
-                        idInCurve = i + 1;
-                    }
-                }
-            }
-
-            int globalID = manager.points.Size();
-            manager.points.Add(new CurveManager.CurvePoint(point, curveID));
-            manager.SelectPoint(globalID);
-            pointsIndexes.AddtAt(globalID, idInCurve);
+            points.AddtAt(point, id);
+            UpdatePath();
         }
 
         public override void DeletePoint(int pointIndex)
         {
-            manager.points.RemoveAt(pointIndex);
-
-            pointsIndexes.Remove(pointIndex);
+            points.RemoveAt(pointIndex);
+            UpdatePath();
         }
     }
 }

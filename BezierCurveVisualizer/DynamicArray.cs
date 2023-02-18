@@ -81,9 +81,13 @@ namespace BezierCurveVisualizer
 
         public int Size() => items.Length;
 
-        public T[] GetItems() => items;
+        public T[] GetArray() => items;
 
         public T Get(int index) => items[index];
+
+        public int IndexOf(T item) => Array.IndexOf(items, item);
+
+        public T Last() => items[^1];
 
         #endregion
 

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
+using System.Security.Cryptography;
 
 namespace BezierCurveVisualizer
 {
@@ -16,13 +17,22 @@ namespace BezierCurveVisualizer
             }
         }
 
+        public struct PointSelection
+        {
+            public int curveID;
+            public int pointID;
+            public PointSelection(int curveID, int pointID)
+            {
+                this.curveID = curveID;
+                this.pointID = pointID;
+            }
+        }
+
         #region Variables
         readonly double jointHitboxRadius = 15.0;
-        int curveResolution = 100;
-        public DynamicArray<CurvePoint> points;
-        public DynamicArray<int> curveReference;
+        int curveResolution = 5;
         public DynamicArray<Curve> curves;
-        public List<int> selection;
+        public List<PointSelection> selection;
         private readonly Keys keepSelectionKey = Keys.Shift;
 
         bool holding;
@@ -32,10 +42,8 @@ namespace BezierCurveVisualizer
 
         public CurveManager()
         {
-            points = new DynamicArray<CurvePoint>();
-            curveReference = new DynamicArray<int>();
             curves = new DynamicArray<Curve>();
-            selection = new List<int>();
+            selection = new List<PointSelection>();
         }
 
         #region Points
@@ -43,46 +51,26 @@ namespace BezierCurveVisualizer
         {
             if (selection.Count == 0)
             {
-                curves.Add(new FreeCurve(this, curves.Size(), point));
-                UpdateCurves();
+                Curve newCurve = new FreeCurve(curves.Size(), point);
+                newCurve.SetResolution(curveResolution);
+                curves.Add(newCurve);
+                SelectPoint(curves.Size() - 1, newCurve.GetPoints().Size() - 1);
             }
             else
             {
-                int curveID = curveReference[selection.Last()];
-                curves[curveID]
-                    .AddPoint(point);
+                int curveID = selection.Last().curveID;
+                int pointID = selection.Last().pointID + 1;
 
-                curveReference.Add(curveID);
-                
-
-                UpdateCurves();
-            }
-        }
-
-        private void UpdateCurves()
-        {
-            for (int i = 0; i < curves.Size(); i++)
-            {
-                curves[i].UpdatePoints(curveResolution);
+                curves[curveID].AddPoint(point, pointID);
+                SelectPoint(curveID, pointID);
             }
         }
 
         public void RemovePoint(int point)
         {
-            points.RemoveAt(point);
+            //points.RemoveAt(point);
 
-            ClearSelection();
-        }
-
-        public Vector2[] GetpointsByIndexes(int[] indexes)
-        {
-            Vector2[] foundPoints = new Vector2[indexes.Length];
-            for (int i = 0; i < indexes.Length; i++)
-            {
-                foundPoints[i] = points.Get(indexes[i]).position;
-            }
-
-            return foundPoints;
+            //ClearSelection();
         }
 
         #endregion
@@ -91,15 +79,16 @@ namespace BezierCurveVisualizer
         public void RegisterClick(MouseEventArgs click)
         {
             Vector2 positionClicked = new(click.X, click.Y);
+
+            (int curveClickedID, int pointClickedID) = CheckPointClick(positionClicked);
             
-            int itemClicked = CheckPointClick(positionClicked);
             switch (click.Button)
             {
                 case MouseButtons.Left:
                     holding = true;
-                    if (itemClicked != -1)
+                    if (pointClickedID != -1)
                     {
-                        SelectPoint(itemClicked);
+                        SelectPoint(curveClickedID, pointClickedID);
                     }
                     else
                     {
@@ -107,60 +96,48 @@ namespace BezierCurveVisualizer
                     }
                     break;
                 case MouseButtons.Right:
-                    if (itemClicked != -1)
+                    if (pointClickedID != -1)
                     {
-                        RemovePoint(itemClicked);
+                        RemovePoint(pointClickedID);
                     }
                     else
                     {
-                        ClearSelection();
+                        selection = new List<PointSelection>();
                     }
                     break;
             }
         }
 
-        private int CheckPointClick(Vector2 point)
+        private (int, int) CheckPointClick(Vector2 clickedPosition)
         {
-            int clickedItem = -1;
-            double clickedItemDistance = double.MaxValue;
-            for (int i = 0; i < points.Size(); i++)
+            int clickedCurve = -1;
+            int clickedPoint = -1;
+            double clickedPointDistance = double.MaxValue;
+
+            for (int curveID = 0; curveID < curves.Size(); curveID++)
             {
-                double distance = point.DistanceTo(points.Get(i).position);
-                if (distance < jointHitboxRadius && distance < clickedItemDistance)
+                DynamicArray<Vector2> points = curves[curveID].GetPoints();
+                for (int i = 0; i < points.Size(); i++)
                 {
-                    clickedItem = i;
-                    clickedItemDistance = distance;
-                }
-            }
-
-            return clickedItem;
-        }
-
-        #endregion
-
-        public void Draw(Graphics graphics)
-        {
-            int pointCount = points.Size();
-            if (pointCount == 0) return;
-            
-            Pen pen = new(Color.Black, 1);
-
-            #region Draw Selection
-            if (HasSelection())
-            {
-                pen.Color = Color.Blue;
-                pen.Width = 3;
-                foreach (int selectedPoint in selection)
-                {
-                    Vector2 item = points.Get(selectedPoint).position;
-                    if (item != null)
+                    double distance = clickedPosition.DistanceTo(points[i]);
+                    if (distance < jointHitboxRadius && distance < clickedPointDistance)
                     {
-                        DrawFunctions.DrawCircle(graphics, pen, item, 13);
+                        clickedPoint = i;
+                        clickedCurve = curveID;
+                        clickedPointDistance = distance;
                     }
                 }
             }
 
-            #endregion
+            return (clickedCurve, clickedPoint);
+        }
+
+        #endregion
+
+        #region Graphics
+        public void Draw(Graphics graphics)
+        {
+            DrawSelection(graphics);
 
             #region Draw Connections
             for (int i = 0; i < curves.Size(); i++)
@@ -174,15 +151,7 @@ namespace BezierCurveVisualizer
 
             #endregion
 
-            #region Draw Curves
-            pen.Width = 3;
-            pen.Color = Color.Red;
-            for (int i = 0; i < curves.Size(); i++)
-            {
-                curves[i].DrawCurve(graphics, pen);
-            }
-
-            #endregion
+            DrawCurves(graphics);
 
             #region Draw Along Curve
             //pen.Color = Color.Black;
@@ -197,33 +166,50 @@ namespace BezierCurveVisualizer
             #endregion
         }
 
+        private void DrawSelection(Graphics graphics)
+        {
+            if (selection.Count == 0) return;
+
+            Pen pen = new Pen(Color.Blue, 3);
+            foreach (PointSelection selectedPoint in selection)
+            {
+                Vector2 position = curves[selectedPoint.curveID].GetPoints()[selectedPoint.pointID];
+                if (position != null)
+                {
+                    DrawFunctions.DrawCircle(graphics, pen, position, 13);
+                }
+            }
+        }
+
+        private void DrawCurves(Graphics graphics) 
+        {
+            Pen pen = new(Color.Red, 3);
+            for (int curveID = 0; curveID < curves.Size(); curveID++)
+            {
+                curves[curveID].DrawCurve(graphics, pen);
+            }
+        }
+
+        #endregion
+
         #region Selection 
-        public void SelectPoint(int index)
+        public void SelectPoint(int curveID, int pointID)
         {
             if (Control.ModifierKeys != keepSelectionKey)
             {
-                ClearSelection();
+                selection = new List<PointSelection>();
             }
 
-            if (selection.Contains(index))
+            PointSelection newSelection = new PointSelection(curveID, pointID);
+            int oldSelectionID = selection.IndexOf(newSelection);
+            if (oldSelectionID == -1)
             {
-                selection.Remove(index);
+                selection.Add(newSelection);
             }
             else
             {
-                Debug.WriteLine("New point");
-                selection.Add(index);
+                selection.RemoveAt(oldSelectionID);
             }
-        }
-
-        public void ClearSelection()
-        {
-            selection.Clear();
-        }
-
-        public bool HasSelection()
-        {
-            return selection.Count != 0;
         }
 
         #endregion
@@ -236,16 +222,15 @@ namespace BezierCurveVisualizer
             if (lastHoldPos != null)
             {
                 Vector2 diff = newPos - lastHoldPos;
-                foreach (int i in selection)
+                foreach (PointSelection pointSelection in selection)
                 {
-                    points[i] = new CurvePoint(points[i].position + diff, points[i].parentCurveID);
+                    Curve curve = curves[pointSelection.curveID];
+                    curve.GetPoints()[pointSelection.pointID] += diff;
+                    curve.UpdatePath();
                 }
-
             }
 
             lastHoldPos = newPos;
-
-            UpdateCurves();
         }
 
         public void ReleaseHold()
