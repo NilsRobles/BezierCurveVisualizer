@@ -1,6 +1,9 @@
-﻿namespace BezierCurveVisualizer
+﻿using System.Drawing.Drawing2D;
+
+
+namespace BezierCurveVisualizer
 {
-    internal class Curve
+    internal abstract class Curve
     {
         public enum CurveAlgorithms
         {
@@ -10,105 +13,90 @@
             MatrixForm
         }
 
+        #region Variables
         CurveAlgorithms algorithm;
-        #region Manipulate algorithm
+        protected readonly DynamicArray<int> pointsIndexes;
+        private Vector2[] points;
+        protected readonly CurveManager manager;
+        private double length;
+        protected int curveID;
+        GraphicsPath curvePath;
+
+        #endregion
+
+        public Curve(CurveManager manager, int curveID)
+        {
+            manager.curveReference.Add(curveID);
+            algorithm = CurveAlgorithms.Bernstein;
+            pointsIndexes = new DynamicArray<int>();
+            length = 1.0;
+            this.manager = manager;
+            this.curveID = curveID;
+            points = Array.Empty<Vector2>();
+            curvePath = new GraphicsPath();
+        }
+
+        #region Change Settings
         public void SetCurveAlgorithm(CurveAlgorithms algorithm)
         {
             this.algorithm = algorithm;
         }
 
-        #endregion
-
-        public double length;
-
-        Vector2[] points;
-        #region Manipulate points
-        public void AddPoint(Vector2 point)
+        public void SetLength(double length)
         {
-            Vector2[] newPoints = new Vector2[points.Length + 1];
-            Array.Copy(points, newPoints, points.Length);
-            newPoints[^1] = point;
-            points = newPoints;
+            this.length = length;
         }
-        public void AddPointAt(Vector2 point, int index)
-        {
-            Vector2[] newPoints = new Vector2[points.Length + 1];
-            Array.Copy(points, newPoints, index);
-            newPoints[index] = point;
-            Array.Copy(points, index, newPoints, index + 1, points.Length - index);
-            points = newPoints;
-        }
-
-        public void RemovePoint(Vector2 point)
-        {
-            if (points.Length == 0) return;
-            int index = Array.IndexOf(points, point);
-            Vector2[] newPoints = new Vector2[points.Length - 1];
-            Array.Copy(points, newPoints, index);
-            Array.Copy(points, index + 1, newPoints, index, newPoints.Length - index);
-            points = newPoints;
-        }
-        public void RemovePointAt(int index)
-        {
-            if (points.Length == 0) return;
-            Vector2[] newPoints = new Vector2[points.Length - 1];
-            Array.Copy(points, newPoints, index);
-            Array.Copy(points, index + 1, newPoints, index, newPoints.Length - index);
-            points = newPoints;
-        }
-
-        public void MovePoint(int index, Vector2 newLocation) => points[index] = newLocation;
-
-        public int GetPointCount() => points.Length;
-        public Vector2[] GetPoints() => points;
 
         #endregion
 
-        public Curve()
+        public void UpdatePoints(int resolution)
         {
-            algorithm = CurveAlgorithms.Bernstein;
-            points = Array.Empty<Vector2>();
-            length = 1.0;
-        }
+            points = manager.GetpointsByIndexes(pointsIndexes.GetItems());
 
-        public static Vector2 Lerp(Vector2 a, Vector2 b, double t) => a + (b - a) * t;
+            if (resolution == 0) return;
+            PointF[] pathPoints = new PointF[resolution];
+            for (int i = 0; i < resolution; i++)
+            {
+                pathPoints[i] = TranslatePoint((float)i / resolution);
+            }
+            curvePath = new GraphicsPath();
+            curvePath.AddLines(pathPoints);
+        }
 
         public Vector2 TranslatePoint(double t)
         {
-            if (points.Length == 0) return new Vector2();
+            if (pointsIndexes.Size() == 0) return new Vector2();
 
             t *= length;
 
-            switch (algorithm)
+            return algorithm switch
             {
-                case CurveAlgorithms.DeCasteljau:
-                    return DeCasteljau(points, t);
-                case CurveAlgorithms.Bernstein:
-                    return Bernstein(points, t);
-                default:
-                    return new Vector2();
-            }
+                CurveAlgorithms.DeCasteljau => DeCasteljau(points, t),
+                CurveAlgorithms.Bernstein => Bernstein(points, t),
+                CurveAlgorithms.PolynomialCoefficients => new Vector2(),
+                CurveAlgorithms.MatrixForm => new Vector2(),
+                _ => new Vector2(),
+            };
         }
 
         public Vector2 TranslatePoint(double t, Graphics g, Pen pen)
         {
-            if (points.Length == 0) return new Vector2();
+            if (pointsIndexes.Size() == 0) return new Vector2();
 
             t *= length;
 
-            switch (algorithm)
+            return algorithm switch
             {
-                case CurveAlgorithms.DeCasteljau:
-                    return DeCasteljau(points, t, g, pen);
-                case CurveAlgorithms.Bernstein:
-                    return Bernstein(points, t, g, pen);
-                default:
-                    return new Vector2();
-            }
+                CurveAlgorithms.DeCasteljau => DeCasteljau(points, t, g, pen),
+                CurveAlgorithms.Bernstein => Bernstein(points, t, g, pen),
+                CurveAlgorithms.PolynomialCoefficients => new Vector2(),
+                CurveAlgorithms.MatrixForm => new Vector2(),
+                _ => new Vector2(),
+            };
         }
 
         #region DeCasteljau
-        public Vector2 DeCasteljau(Vector2[] points, double t)
+        private Vector2 DeCasteljau(Vector2[] points, double t)
         {
             if (points.Length == 1) return points[0];
 
@@ -121,7 +109,7 @@
             return DeCasteljau(newPoints, t);
         }
 
-        public Vector2 DeCasteljau(Vector2[] points, double t, Graphics g, Pen pen)
+        private Vector2 DeCasteljau(Vector2[] points, double t, Graphics g, Pen pen)
         {
             if (points.Length == 1) return points[0];
 
@@ -147,13 +135,13 @@
         #endregion
 
         #region Bernstein
-        public Vector2 Bernstein(Vector2[] points, double t)
+        private static Vector2 Bernstein(Vector2[] points, double t)
         {
             int n = points.Length - 1;
             if (n == 0) return new Vector2(0, 0);
 
             int nFac = Factorial(n);
-            Vector2 resultingPoint = new Vector2(0, 0);
+            Vector2 resultingPoint = new(0, 0);
 
             for (int i = 0; i <= n; i++)
             {
@@ -162,13 +150,13 @@
             return resultingPoint;
         }
 
-        public Vector2 Bernstein(Vector2[] points, double t, Graphics g, Pen pen)
+        private static Vector2 Bernstein(Vector2[] points, double t, Graphics g, Pen pen)
         {
             int n = points.Length - 1;
             if (n == 0) return new Vector2(0, 0);
 
             int nFac = Factorial(n);
-            Vector2 resultingPoint = new Vector2(0, 0);
+            Vector2 resultingPoint = new(0, 0);
 
             for (int i = 0; i <= n; i++)
             {
@@ -181,6 +169,10 @@
 
         #endregion
 
+        public abstract void AddPoint(Vector2 point);
+
+        public abstract void DeletePoint(int pointIndex);
+
         private static int Factorial(int value)
         {
             if (value == 0) return 1;
@@ -190,6 +182,28 @@
                 result *= i;
             }
             return result;
+        }
+
+        private static Vector2 Lerp(Vector2 a, Vector2 b, double t) => a + (b - a) * t;
+
+        public void DrawConnections(Graphics g, Brush brush, Pen pen)
+        {
+            for (int i = 0; i < points.Length - 1; i++)
+            {
+                g.DrawLine(pen, points[i], points[i + 1]);
+            }
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                Vector2 vector = points[i];
+                DrawFunctions.DrawFullCircle(g, brush, (float)vector.x, (float)vector.y, 9);
+                DrawFunctions.DrawCircle(g, pen, vector, 8);
+            }
+        }
+
+        public void DrawCurve(Graphics g, Pen pen)
+        {
+            g.DrawPath(pen, curvePath);
         }
     }
 }
