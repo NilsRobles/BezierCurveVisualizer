@@ -51,9 +51,11 @@
             this.settingsMenu.Controls.Add(this.followCountSetting);
             this.settingsMenu.Controls.Add(this.label1);
             this.settingsMenu.Dock = System.Windows.Forms.DockStyle.Right;
-            this.settingsMenu.Location = new System.Drawing.Point(731, 0);
+            this.settingsMenu.Location = new System.Drawing.Point(640, 0);
+            this.settingsMenu.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.settingsMenu.Name = "settingsMenu";
-            this.settingsMenu.Size = new System.Drawing.Size(183, 600);
+            this.settingsMenu.Padding = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.settingsMenu.Size = new System.Drawing.Size(160, 450);
             this.settingsMenu.TabIndex = 0;
             this.settingsMenu.TabStop = false;
             this.settingsMenu.Text = "Settings";
@@ -67,18 +69,19 @@
             this.algorithmSetting.Items.AddRange(new object[] {
             "DeCasteljau",
             "Bernstein"});
-            this.algorithmSetting.Location = new System.Drawing.Point(3, 150);
+            this.algorithmSetting.Location = new System.Drawing.Point(3, 112);
+            this.algorithmSetting.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.algorithmSetting.Name = "algorithmSetting";
-            this.algorithmSetting.Size = new System.Drawing.Size(174, 28);
+            this.algorithmSetting.Size = new System.Drawing.Size(153, 23);
             this.algorithmSetting.TabIndex = 5;
             this.algorithmSetting.TextChanged += new System.EventHandler(this.algorithmSetting_TextUpdate);
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(3, 130);
+            this.label3.Location = new System.Drawing.Point(3, 98);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(76, 20);
+            this.label3.Size = new System.Drawing.Size(61, 15);
             this.label3.TabIndex = 6;
             this.label3.Text = "Algorithm";
             // 
@@ -91,15 +94,15 @@
             0,
             0,
             65536});
-            this.followSpeedSetting.Location = new System.Drawing.Point(3, 100);
-            this.followSpeedSetting.Margin = new System.Windows.Forms.Padding(3, 50, 3, 3);
+            this.followSpeedSetting.Location = new System.Drawing.Point(3, 75);
+            this.followSpeedSetting.Margin = new System.Windows.Forms.Padding(3, 38, 3, 2);
             this.followSpeedSetting.Minimum = new decimal(new int[] {
             100,
             0,
             0,
             -2147483648});
             this.followSpeedSetting.Name = "followSpeedSetting";
-            this.followSpeedSetting.Size = new System.Drawing.Size(174, 27);
+            this.followSpeedSetting.Size = new System.Drawing.Size(152, 23);
             this.followSpeedSetting.TabIndex = 1;
             this.followSpeedSetting.ThousandsSeparator = true;
             this.followSpeedSetting.Value = new decimal(new int[] {
@@ -112,17 +115,18 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(3, 80);
+            this.label2.Location = new System.Drawing.Point(3, 60);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(88, 20);
+            this.label2.Size = new System.Drawing.Size(70, 15);
             this.label2.TabIndex = 4;
             this.label2.Text = "Point Speed";
             // 
             // followCountSetting
             // 
-            this.followCountSetting.Location = new System.Drawing.Point(3, 50);
+            this.followCountSetting.Location = new System.Drawing.Point(3, 38);
+            this.followCountSetting.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.followCountSetting.Name = "followCountSetting";
-            this.followCountSetting.Size = new System.Drawing.Size(174, 27);
+            this.followCountSetting.Size = new System.Drawing.Size(152, 23);
             this.followCountSetting.TabIndex = 2;
             this.followCountSetting.Value = new decimal(new int[] {
             1,
@@ -134,9 +138,9 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 30);
+            this.label1.Location = new System.Drawing.Point(3, 22);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(85, 20);
+            this.label1.Size = new System.Drawing.Size(71, 15);
             this.label1.TabIndex = 3;
             this.label1.Text = "Point Count";
             // 
@@ -144,8 +148,9 @@
             // 
             this.curvePictureBox.Dock = System.Windows.Forms.DockStyle.Left;
             this.curvePictureBox.Location = new System.Drawing.Point(0, 0);
+            this.curvePictureBox.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.curvePictureBox.Name = "curvePictureBox";
-            this.curvePictureBox.Size = new System.Drawing.Size(728, 600);
+            this.curvePictureBox.Size = new System.Drawing.Size(637, 450);
             this.curvePictureBox.TabIndex = 3;
             this.curvePictureBox.TabStop = false;
             this.curvePictureBox.Paint += new System.Windows.Forms.PaintEventHandler(this.CurvePictureBox_Paint);
@@ -155,12 +160,11 @@
             // 
             // Main
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(914, 600);
+            this.ClientSize = new System.Drawing.Size(800, 450);
             this.Controls.Add(this.curvePictureBox);
             this.Controls.Add(this.settingsMenu);
-            this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.Name = "Main";
             this.Text = "Bezier Curve Visualizer";
             this.Load += new System.EventHandler(this.OnLoad);

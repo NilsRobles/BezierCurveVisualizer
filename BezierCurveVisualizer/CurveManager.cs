@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
-using System.Drawing;
-using System.Security.Cryptography;
 
 namespace BezierCurveVisualizer
 {
     internal class CurveManager
     {
+
+        #region Structs
         public struct CurvePoint
         {
             public Vector2 position;
@@ -28,15 +28,20 @@ namespace BezierCurveVisualizer
             }
         }
 
+        #endregion
+
         #region Variables
         readonly double jointHitboxRadius = 15.0;
-        int curveResolution = 5;
+        private int curveResolution = 100;
         public DynamicArray<Curve> curves;
         public List<PointSelection> selection;
         private readonly Keys keepSelectionKey = Keys.Shift;
 
         bool holding;
-        Vector2? lastHoldPos;
+        bool dragging;
+        float dragDeadzone = 15;
+        Vector2 lastClickPos;
+        Vector2 lastHoldPos;
 
         #endregion
 
@@ -44,6 +49,11 @@ namespace BezierCurveVisualizer
         {
             curves = new DynamicArray<Curve>();
             selection = new List<PointSelection>();
+
+            holding = false;
+            dragging = false;
+            lastClickPos = new Vector2();
+            lastHoldPos = new Vector2();
         }
 
         #region Points
@@ -79,13 +89,15 @@ namespace BezierCurveVisualizer
         public void RegisterClick(MouseEventArgs click)
         {
             Vector2 positionClicked = new(click.X, click.Y);
+            lastClickPos = positionClicked;
+            lastHoldPos = positionClicked;
+            holding = true;
 
             (int curveClickedID, int pointClickedID) = CheckPointClick(positionClicked);
-            
+
             switch (click.Button)
             {
                 case MouseButtons.Left:
-                    holding = true;
                     if (pointClickedID != -1)
                     {
                         SelectPoint(curveClickedID, pointClickedID);
@@ -106,6 +118,32 @@ namespace BezierCurveVisualizer
                     }
                     break;
             }
+        }
+
+        public void RegisterRelease(MouseEventArgs click)
+        {
+            holding = false;
+            if (dragging)
+            {
+                dragging = false;
+                return;
+            }
+        }
+
+        public void RegisterMouseMove(MouseEventArgs e)
+        {
+            Vector2 mousePos = new(e.X, e.Y);
+
+            if (!holding) return;
+            
+            if (!dragging)
+            {
+                if (lastClickPos.DistanceTo(mousePos) < dragDeadzone) return;
+                dragging = true;
+            }
+            UpdateHold(mousePos);
+
+            lastHoldPos = mousePos;
         }
 
         private (int, int) CheckPointClick(Vector2 clickedPosition)
@@ -217,26 +255,27 @@ namespace BezierCurveVisualizer
         #region Hold 
         public void UpdateHold(Vector2 newPos)
         {
-            if (holding == false) return;
-
             if (lastHoldPos != null)
             {
+                List<Curve> updatedCurves = new List<Curve>();
+
                 Vector2 diff = newPos - lastHoldPos;
                 foreach (PointSelection pointSelection in selection)
                 {
                     Curve curve = curves[pointSelection.curveID];
                     curve.GetPoints()[pointSelection.pointID] += diff;
+
+                    if (!updatedCurves.Contains(curve))
+                    {
+                        updatedCurves.Add(curve);
+                    }
+                }
+
+                foreach (Curve curve in updatedCurves)
+                {
                     curve.UpdatePath();
                 }
             }
-
-            lastHoldPos = newPos;
-        }
-
-        public void ReleaseHold()
-        {
-            holding = false;
-            lastHoldPos = null;
         }
         #endregion
     }

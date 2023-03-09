@@ -44,6 +44,8 @@ namespace BezierCurveVisualizer
             updateTimer.Elapsed += Update;
             updateTimer.AutoReset = true;
             updateTimer.Enabled = true;
+
+            ResizePictureBox();
         }
 
         private void OnLoad(object sender, EventArgs e)
@@ -69,12 +71,12 @@ namespace BezierCurveVisualizer
 
         private void CurveBox_MouseMove(object sender, MouseEventArgs e)
         {
-            curveManager.UpdateHold(new Vector2(e.X, e.Y));
+            curveManager.RegisterMouseMove(e);
         }
 
         private void CurveBox_MouseUp(object sender, MouseEventArgs e)
         {
-            curveManager.ReleaseHold();
+            curveManager.RegisterRelease(e);
         }
 
         private void Main_KeyDown(object sender, KeyEventArgs e)
@@ -91,6 +93,11 @@ namespace BezierCurveVisualizer
         }
 
         private void Main_Resize(object sender, EventArgs e)
+        {
+            ResizePictureBox();
+        }
+
+        private void ResizePictureBox()
         {
             curvePictureBox.Width = Size.Width - settingsMenu.Width - 20;
         }
@@ -162,7 +169,10 @@ namespace BezierCurveVisualizer
 
         private void CurvePictureBox_Paint(object sender, PaintEventArgs e)
         {
-            curveManager.Draw(e.Graphics);
+            Graphics g = e.Graphics;
+
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            curveManager.Draw(g);
         }
     }
 }

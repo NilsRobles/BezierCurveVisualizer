@@ -30,7 +30,7 @@ namespace BezierCurveVisualizer
             points = new DynamicArray<Vector2>();
             curvePath = new GraphicsPath();
 
-            algorithm = CurveAlgorithms.Bernstein;
+            algorithm = CurveAlgorithms.DeCasteljau;
             length = 1.0;
             this.resolution = resolution;
         }
