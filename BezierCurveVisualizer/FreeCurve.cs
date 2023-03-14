@@ -19,9 +19,9 @@ namespace BezierCurveVisualizer
             UpdatePath();
         }
 
-        public override void DeletePoint(int pointIndex)
+        public override void DeletePoint(int id)
         {
-            points.RemoveAt(pointIndex);
+            points.RemoveAt(id);
             UpdatePath();
         }
     }

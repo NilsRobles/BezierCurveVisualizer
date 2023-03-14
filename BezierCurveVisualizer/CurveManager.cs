@@ -6,17 +6,6 @@ namespace BezierCurveVisualizer
     {
 
         #region Structs
-        public struct CurvePoint
-        {
-            public Vector2 position;
-            public int parentCurveID;
-            public CurvePoint(Vector2 position, int parentCurveID)
-            {
-                this.position = position;
-                this.parentCurveID = parentCurveID;
-            }
-        }
-
         public struct PointSelection
         {
             public int curveID;
@@ -31,15 +20,16 @@ namespace BezierCurveVisualizer
         #endregion
 
         #region Variables
-        readonly double jointHitboxRadius = 15.0;
-        private int curveResolution = 100;
-        public DynamicArray<Curve> curves;
-        public List<PointSelection> selection;
+        private readonly double jointHitboxRadius = 15.0;
+        private readonly float dragDeadzone = 8;
         private readonly Keys keepSelectionKey = Keys.Shift;
 
+        private int curveResolution = 100;
+        public DynamicArray<Curve> curves;
+
+        public List<PointSelection> selection;
         bool holding;
         bool dragging;
-        float dragDeadzone = 15;
         Vector2 lastClickPos;
         Vector2 lastHoldPos;
 
@@ -48,8 +38,8 @@ namespace BezierCurveVisualizer
         public CurveManager()
         {
             curves = new DynamicArray<Curve>();
-            selection = new List<PointSelection>();
 
+            selection = new List<PointSelection>();
             holding = false;
             dragging = false;
             lastClickPos = new Vector2();
@@ -76,11 +66,9 @@ namespace BezierCurveVisualizer
             }
         }
 
-        public void RemovePoint(int point)
+        public void RemovePoint(int curveID, int pointID)
         {
-            //points.RemoveAt(point);
-
-            //ClearSelection();
+            curves[curveID].DeletePoint(pointID);
         }
 
         #endregion
@@ -93,14 +81,14 @@ namespace BezierCurveVisualizer
             lastHoldPos = positionClicked;
             holding = true;
 
-            (int curveClickedID, int pointClickedID) = CheckPointClick(positionClicked);
+            (int curveID, int pointID) = CheckPointClick(positionClicked);
 
             switch (click.Button)
             {
                 case MouseButtons.Left:
-                    if (pointClickedID != -1)
+                    if (pointID != -1)
                     {
-                        SelectPoint(curveClickedID, pointClickedID);
+                        SelectPoint(curveID, pointID);
                     }
                     else
                     {
@@ -108,19 +96,19 @@ namespace BezierCurveVisualizer
                     }
                     break;
                 case MouseButtons.Right:
-                    if (pointClickedID != -1)
+                    if (pointID != -1)
                     {
-                        RemovePoint(pointClickedID);
+                        RemovePoint(curveID, pointID);
                     }
                     else
                     {
-                        selection = new List<PointSelection>();
+                        selection.Clear();
                     }
                     break;
             }
         }
 
-        public void RegisterRelease(MouseEventArgs click)
+        public void RegisterRelease()
         {
             holding = false;
             if (dragging)
@@ -208,7 +196,7 @@ namespace BezierCurveVisualizer
         {
             if (selection.Count == 0) return;
 
-            Pen pen = new Pen(Color.Blue, 3);
+            Pen pen = new(Color.Blue, 3);
             foreach (PointSelection selectedPoint in selection)
             {
                 Vector2 position = curves[selectedPoint.curveID].GetPoints()[selectedPoint.pointID];
@@ -238,7 +226,7 @@ namespace BezierCurveVisualizer
                 selection = new List<PointSelection>();
             }
 
-            PointSelection newSelection = new PointSelection(curveID, pointID);
+            PointSelection newSelection = new(curveID, pointID);
             int oldSelectionID = selection.IndexOf(newSelection);
             if (oldSelectionID == -1)
             {
@@ -257,7 +245,7 @@ namespace BezierCurveVisualizer
         {
             if (lastHoldPos != null)
             {
-                List<Curve> updatedCurves = new List<Curve>();
+                List<Curve> updatedCurves = new();
 
                 Vector2 diff = newPos - lastHoldPos;
                 foreach (PointSelection pointSelection in selection)
