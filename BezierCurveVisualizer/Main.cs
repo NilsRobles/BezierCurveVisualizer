@@ -76,7 +76,7 @@ namespace BezierCurveVisualizer
 
         private void CurveBox_MouseUp(object sender, MouseEventArgs e)
         {
-            curveManager.RegisterRelease(e);
+            curveManager.RegisterRelease();
         }
 
         private void Main_KeyDown(object sender, KeyEventArgs e)
