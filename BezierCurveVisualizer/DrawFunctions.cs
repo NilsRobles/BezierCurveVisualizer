@@ -17,11 +17,11 @@ namespace BezierCurveVisualizer
                 radius * 2);
         }
 
-        public static void DrawFullCircle(Graphics g, Brush brush, float centerX, float centerY, float radius)
+        public static void DrawFullCircle(Graphics g, Brush brush, Vector2 position, float radius)
         {
             g.FillEllipse(brush,
-                centerX - radius,
-                centerY - radius,
+                (float)position.x - radius,
+                (float)position.y - radius,
                 radius * 2,
                 radius * 2);
         }

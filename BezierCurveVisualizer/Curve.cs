@@ -1,4 +1,5 @@
-﻿using System.Drawing.Drawing2D;
+﻿using System.Drawing;
+using System.Drawing.Drawing2D;
 
 
 namespace BezierCurveVisualizer
@@ -15,23 +16,23 @@ namespace BezierCurveVisualizer
 
         #region Variables
         // Curve shape
-        protected DynamicArray<Vector2> points;
-        private GraphicsPath curvePath;
+        protected DynamicArray<Vector2> points = new();
+        private GraphicsPath curvePath = new();
         
         // Settings
-        private CurveAlgorithms algorithm;
-        private double length;
+        private CurveAlgorithms algorithm = CurveAlgorithms.DeCasteljau;
+        private double length = 1.0;
         private int resolution;
+
+        // Points
+        private float t = 0;
+        private float pointSpeed = 0.01f;
+        private int pointCount = 3;
 
         #endregion
 
         public Curve(int resolution)
         {
-            points = new DynamicArray<Vector2>();
-            curvePath = new GraphicsPath();
-
-            algorithm = CurveAlgorithms.DeCasteljau;
-            length = 1.0;
             this.resolution = resolution;
         }
 
@@ -50,6 +51,16 @@ namespace BezierCurveVisualizer
         {
             this.resolution = resolution;
             UpdatePath();
+        }
+
+        public void SetPointSpeed(float pointSpeed)
+        {
+            this.pointSpeed = pointSpeed;
+        }
+
+        public void SetPointCount(int pointCount)
+        {
+            this.pointCount = pointCount;
         }
 
         #endregion
@@ -208,7 +219,7 @@ namespace BezierCurveVisualizer
             for (int i = 0; i < points.Size(); i++)
             {
                 Vector2 vector = points[i];
-                DrawFunctions.DrawFullCircle(g, brush, (float)vector.x, (float)vector.y, 9);
+                DrawFunctions.DrawFullCircle(g, brush, vector, 9);
                 DrawFunctions.DrawCircle(g, pen, vector, 8);
             }
         }
@@ -216,6 +227,30 @@ namespace BezierCurveVisualizer
         public void DrawCurve(Graphics g, Pen pen)
         {
             g.DrawPath(pen, curvePath);
+        }
+
+        public void DrawPoints(Graphics g, Brush brush)
+        {
+            // Increment t
+            t += pointSpeed;
+            if (t < 0) t = 1;
+            if (t > 1) t = 0;
+
+            // Draw visualisation of the algorithm
+            TranslatePoint(t, g, new Pen(Color.Blue, 2));
+
+            // Add the part size (the distance between points) after every interasion to get multiple points
+            float partSize = 1f / pointCount;
+            float currentT = t;
+            for (int i = 0; i < pointCount; i++)
+            {
+                currentT += partSize;
+                // When apoint passes the end of the curve we lopp it back to the start
+                if (currentT > 1) currentT--;
+
+                Vector2 vector = TranslatePoint(currentT);
+                DrawFunctions.DrawFullCircle(g, brush, vector, 6);
+            }
         }
     }
 }

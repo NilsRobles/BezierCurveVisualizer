@@ -18,7 +18,7 @@ namespace BezierCurveVisualizer
         double followSpeed;
         double followOffset;
 
-        double updateFrequency = 144;
+        double updateFrequency = 30;
 
         bool holding = false;
         readonly double jointHitboxRadius = 15.0;

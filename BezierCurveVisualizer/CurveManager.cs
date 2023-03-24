@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using Aspose.Pdf.Drawing;
+using System.Diagnostics;
+using System.Drawing;
 
 namespace BezierCurveVisualizer
 {
@@ -68,7 +70,13 @@ namespace BezierCurveVisualizer
 
         public void RemovePoint(int curveID, int pointID)
         {
-            curves[curveID].DeletePoint(pointID);
+            Curve curve = curves[curveID];
+            curve.DeletePoint(pointID);
+            
+            PointSelection deletedPoint = new(curveID, pointID);
+            selection.Remove(deletedPoint);
+
+            curve.UpdatePath();
         }
 
         #endregion
@@ -179,19 +187,17 @@ namespace BezierCurveVisualizer
 
             DrawCurves(graphics);
 
-            #region Draw Along Curve
-            //pen.Color = Color.Black;
-            //pen.Width = 3;
-            //double globalOffset = followOffset * t;
-            //for (int i = 0; i < followCount; i++)
-            //{
-            //    double pointT = globalOffset + followOffset * i;
-            //    DrawCircle(graphics, pen, curve.TranslatePoint(pointT, graphics, new Pen(Color.DarkGreen, 2)), 5);
-            //}
-
-            #endregion
+            DrawAlongCurve(graphics);
         }
 
+        private void DrawAlongCurve(Graphics graphics)
+        {
+            Brush brush = new SolidBrush(Color.Black);
+            for (int curveID = 0; curveID < curves.Size(); curveID++)
+            {
+                curves[curveID].DrawPoints(graphics, brush);
+            }
+        }
         private void DrawSelection(Graphics graphics)
         {
             if (selection.Count == 0) return;
