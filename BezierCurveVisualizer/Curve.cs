@@ -190,6 +190,8 @@ namespace BezierCurveVisualizer
 
         public DynamicArray<Vector2> GetPoints() => points;
 
+        public int PointCount() => points.Size();
+
         public abstract void AddPoint(Vector2 point, int id);
 
         public abstract void DeletePoint(int pointIndex);

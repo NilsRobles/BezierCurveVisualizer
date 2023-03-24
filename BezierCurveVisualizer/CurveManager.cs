@@ -70,12 +70,16 @@ namespace BezierCurveVisualizer
 
         public void RemovePoint(int curveID, int pointID)
         {
+            selection.Clear();
+
             Curve curve = curves[curveID];
             curve.DeletePoint(pointID);
-            
-            PointSelection deletedPoint = new(curveID, pointID);
-            selection.Remove(deletedPoint);
 
+            if (curve.PointCount() == 0)
+            {
+                curves.RemoveAt(curveID);
+                return;
+            }
             curve.UpdatePath();
         }
 
